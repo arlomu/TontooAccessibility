@@ -30,6 +30,60 @@ pub fn init_lang(fallback: &str) -> Result<(), LangError> {
     LangStore::init(files, Some(fallback.to_string()))
 }
 
+/// Validate a language file JSON structure without loading it.
+/// Returns Ok(()) if valid, Err with description if invalid.
+pub fn validate_lang_file<P: AsRef<Path>>(path: P) -> Result<(), LangError> {
+    let data = std::fs::read_to_string(path.as_ref())?;
+    let value = serde_json::from_str::<serde_json::Value>(&data)?;
+    
+    if !value.is_object() {
+        return Err(LangError::Lang("Root must be an object".to_string()));
+    }
+    
+    let obj = value.as_object().unwrap();
+    
+    if !obj.contains_key("lang") {
+        return Err(LangError::Lang("Missing 'lang' field".to_string()));
+    }
+    
+    if !obj.contains_key("translations") {
+        return Err(LangError::Lang("Missing 'translations' field".to_string()));
+    }
+    
+    let lang = obj.get("lang").and_then(|v| v.as_str()).unwrap();
+    validate_lang_name(lang)?;
+    
+    let translations = obj.get("translations").and_then(|v| v.as_object()).unwrap();
+    for (key, _) in translations {
+        if key.is_empty() {
+            return Err(LangError::Lang("Translation key cannot be empty".to_string()));
+        }
+    }
+    
+    Ok(())
+}
+
+/// Validate all language files in a directory.
+/// Returns list of (path, error) tuples for invalid files.
+pub fn validate_lang_dir<P: AsRef<Path>>(dir: P) -> Result<Vec<(String, String)>, LangError> {
+    let mut errors = Vec::new();
+    
+    if let Ok(entries) = std::fs::read_dir(dir) {
+        for entry in entries {
+            let entry = entry?;
+            let path = entry.path();
+            
+            if path.extension().map_or(false, |ext| ext == "json") {
+                if let Err(e) = validate_lang_file(&path) {
+                    errors.push((path.display().to_string(), e.to_string()));
+                }
+            }
+        }
+    }
+    
+    Ok(errors)
+}
+
 /// Setup function for embedding projects - creates lang/ directory and example files.
 pub fn setup_lang_dir<P: AsRef<Path>>(dest: P) -> Result<(), LangError> {
     let dest = dest.as_ref();
