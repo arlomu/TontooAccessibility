@@ -1,0 +1,73 @@
+name: Release on Final PR
+
+on:
+  pull_request:
+    types:
+      - opened
+      - synchronize
+      - reopened
+
+jobs:
+  check-final-and-release:
+    if: contains(github.event.pull_request.title, '--final')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rust-src, clippy, rustfmt
+
+      - name: Cache cargo registry
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            target
+          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-cargo-
+
+      - name: Check formatting
+        run: cargo fmt -- --check
+
+      - name: Run clippy
+        run: cargo clippy --all-targets -- -D warnings
+
+      - name: Run tests
+        run: cargo test
+
+      - name: Build library
+        run: cargo build --release
+
+      - name: Create release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v${{ github.event.pull_request.number }}
+          name: Release v${{ github.event.pull_request.number }}
+          body: |
+            Automatic release triggered by PR #${{ github.event.pull_request.number }}
+            
+            ## Changes
+            ${{ github.event.pull_request.title }}
+            
+            ## Usage
+            Add to your `Cargo.toml`:
+            ```toml
+            [dependencies]
+            tontoo-accessibility = { git = "https://github.com/${{ github.repository }", tag = "v${{ github.event.pull_request.number }}" }
+            ```
+          draft: false
+          prerelease: false
+          generate_release_notes: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

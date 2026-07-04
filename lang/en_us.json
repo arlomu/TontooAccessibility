@@ -1,0 +1,13 @@
+{
+  "lang": "en_us",
+  "translations": {
+    "app.title": "My Application",
+    "app.description": "A Rust application with localization",
+    "button.submit": "Submit",
+    "button.cancel": "Cancel",
+    "message.welcome": "Welcome, {name}!",
+    "message.goodbye": "Goodbye, {name}!",
+    "error.not_found": "Resource not found",
+    "error.invalid_input": "Invalid input: {reason}"
+  }
+}
