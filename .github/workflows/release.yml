@@ -64,7 +64,7 @@ jobs:
             Add to your `Cargo.toml`:
             ```toml
             [dependencies]
-            tontoo-accessibility = { git = "https://github.com/${{ github.repository }", tag = "v${{ github.event.pull_request.number }}" }
+            tontoo-accessibility = { git = "https://github.com/${{ github.repository }}", tag = "v${{ github.event.pull_request.number }}" }
             ```
           draft: false
           prerelease: false
